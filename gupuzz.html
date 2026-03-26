@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>二十四节令鼓鼓谱制作</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 620px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .note {
+            display: inline-block;
+            width: 80px;
+            height: 50px;
+            margin: 5px;
+            text-align: center;
+            line-height: 50px;
+            border: 1px solid #000;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #e7f3fe;
+            font-size: 12px;
+            user-select: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .note-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            display: block;
+            margin: 20px auto 0;
+            cursor: crosshair;
+        }
+
+        #trashbin {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 100px;
+            height: 100px;
+            border: 2px dashed #c33;
+            border-radius: 10px;
+            background-color: #fee;
+            color: #a00;
+            font-size: 20px;
+            text-align: center;
+            line-height: 100px;
+            user-select: none;
+            transition: background-color 0.3s, border-color 0.3s;
+            z-index: 999;
+        }
+        #trashbin.dragover {
+            background-color: #faa;
+            border-color: #a00;
+            color: #600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>二十四节令鼓鼓谱制作 - 多五线谱及辅助线 + 垃圾桶删除</h1>
+        <div class="note-container">
+            <!-- 传统音符 -->
+            <div class="note" draggable="true" data-value="4">𝄽</div>
+            <div class="note" draggable="true" data-value="2">𝄼</div>
+            <div class="note" draggable="true" data-value="1">♪</div>
+            <div class="note" draggable="true" data-value="0.5">♫</div>
+            <div class="note" draggable="true" data-value="0.25">𝅘𝅥𝅮</div>
+            <div class="note" draggable="true" data-value="0.125">𝅘𝅥𝅮𝅘𝅥𝅮</div>
+            <div class="note" draggable="true" data-value="R4">𝄻</div>
+            <div class="note" draggable="true" data-value="R2">𝄼</div>
+            <div class="note" draggable="true" data-value="R1">𝄽</div>
+            <div class="note" draggable="true" data-value="R0.5">𝄽</div>
+            <div class="note" draggable="true" data-value="R0.25">𝄽</div>
+            <div class="note" draggable="true" data-value="R0.125">𝄽</div>
+
+            <!-- 二十四节令鼓辅助符号 -->
+            <div class="note" draggable="true" data-value="z">左</div>
+            <div class="note" draggable="true" data-value="y">右</div>
+            <div class="note" draggable="true" data-value="d">地板</div>
+            <div class="note" draggable="true" data-value="g">鼓棒</div>
+            <div class="note" draggable="true" data-value="he">he</div>
+            <div class="note" draggable="true" data-value="ha">ha</div>
+            <div class="note" draggable="true" data-value="ho">ho</div>
+            <div class="note" draggable="true" data-value="sa">sa</div>
+            <div class="note" draggable="true" data-value="hesa">hesa</div>
+        </div>
+        <canvas id="scoreCanvas" width="600" height="420"></canvas>
+    </div>
+
+    <!-- 垃圾桶 -->
+    <div id="trashbin" title="拖拽音符到这里删除">🗑️ 垃圾桶</div>
+
+    <script>
+        const notes = document.querySelectorAll('.note');
+        const canvas = document.getElementById('scoreCanvas');
+        const ctx = canvas.getContext('2d');
+        const trashbin = document.getElementById('trashbin');
+
+        // 存储已绘制音符，方便删除
+        // 元素格式：{ symbol, x, y, staffIndex, fontSize, noteValue }
+        const placedNotes = [];
+
+        // 设定
+        const staffCount = 3;
+        const staffHeight = 120;
+        const lineSpacing = 20;
+
+        function drawStaffs() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#000';
+            for(let staffIndex = 0; staffIndex < staffCount; staffIndex++) {
+                const topY = staffIndex * staffHeight;
+                for(let i = 0; i < 5; i++) {
+                    const y = topY + (i + 1) * lineSpacing;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([4, 4]);
+                const auxTopY = topY + lineSpacing * 0.5;
+                ctx.beginPath();
+                ctx.moveTo(0, auxTopY);
+                ctx.lineTo(canvas.width, auxTopY);
+                ctx.stroke();
+                const auxBottomY = topY + lineSpacing * 6;
+                ctx.beginPath();
+                ctx.moveTo(0, auxBottomY);
+                ctx.lineTo(canvas.width, auxBottomY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+        drawStaffs();
+
+        // 映射音符
+        const noteMapping = {
+            '4': '𝄽', '2': '𝄼', '1': '♪', '0.5': '♫', '0.25': '𝅘𝅥𝅮', '0.125': '𝅘𝅥𝅮𝅘𝅥𝅮',
+            'R4': '𝄻', 'R2': '𝄼', 'R1': '𝄽', 'R0.5': '𝄽', 'R0.25': '𝄽', 'R0.125': '𝄽',
+            'z': '左', 'y': '右', 'd': '地', 'g': '棒', 'he': 'he', 'ha': 'ha', 'ho': 'ho', 'sa': 'sa', 'hesa': 'hesa'
+        };
+
+        const mainNotes = ['4', '2', '1', '0.5', '0.25', '0.125','R4','R2','R1','R0.5','R0.25','R0.125'];
+        const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
+
+        // 拖动开始时带上类型
+        notes.forEach(note => {
+            note.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', note.dataset.value);
+                e.dataTransfer.setData('source', 'palette'); // 标明来源是工具栏
+            });
+        });
+
+        // 画布不操作默认阻止
+        canvas.addEventListener('dragover', e => e.preventDefault());
+        trashbin.addEventListener('dragover', e => {
+            e.preventDefault();
+            trashbin.classList.add('dragover');
+        });
+        trashbin.addEventListener('dragleave', e => {
+            trashbin.classList.remove('dragover');
+        });
+
+        // 拖放画布，放音符 - 新增横向对齐格子逻辑
+        canvas.addEventListener('drop', e => {
+            e.preventDefault();
+            trashbin.classList.remove('dragover');
+            const noteValue = e.dataTransfer.getData('text/plain');
+            const source = e.dataTransfer.getData('source');
+
+            if(!noteValue) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const xPosition = e.clientX - rect.left;
+            const yPosGlobal = e.clientY - rect.top;
+
+            const staffIndex = Math.floor(yPosGlobal / staffHeight);
+            if (staffIndex < 0 || staffIndex >= staffCount) return;
+            const staffTopY = staffIndex * staffHeight;
+
+            // 横向40px为格子宽度，纵向10px为格子高度，均居中调整
+            const gridX = Math.floor(xPosition / 40) * 40 + 20;
+            const gridY = Math.floor((yPosGlobal - staffTopY) / 10) * 10 + staffTopY + 5;
+
+            const noteSymbol = noteMapping[noteValue] || noteValue;
+
+            let fontSize;
+            if (mainNotes.includes(noteValue)) fontSize = 40;
+            else if (auxNotes.includes(noteValue)) fontSize = 20;
+            else fontSize = 30;
+
+            // 添加到placedNotes数组
+            placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue});
+
+            redrawAllNotes();
+        });
+
+        // 重新绘制五线谱及所有音符
+        function redrawAllNotes() {
+            drawStaffs();
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#000';
+            for(const note of placedNotes) {
+                ctx.font = note.fontSize + 'px serif';
+                ctx.fillText(note.symbol, note.x, note.y);
+            }
+        }
+
+        // 拖动画布上的音符删除（从placedNotes删除）
+        // 点击canvas检测附近音符，开始拖动它
+
+        let draggingNoteIndex = -1;
+        let draggingFromCanvas = false;
+
+        function distance(x1,y1,x2,y2) {
+            return Math.sqrt((x1 - x2)**2 + (y1 - y2)**2);
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const xMouse = e.clientX - rect.left;
+            const yMouse = e.clientY - rect.top;
+            // 找离鼠标点最近的音符(40px以内)
+            for(let i=0; i<placedNotes.length; i++) {
+                const n = placedNotes[i];
+                if(distance(n.x, n.y, xMouse, yMouse) < 30) {
+                    draggingNoteIndex = i;
+                    draggingFromCanvas = true;
+                    break;
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', e => {
+            if(draggingFromCanvas && draggingNoteIndex >= 0) {
+                // 如果释放位置在垃圾桶内，删除该音符
+                const trashRect = trashbin.getBoundingClientRect();
+                if(e.clientX >= trashRect.left && e.clientX <= trashRect.right &&
+                    e.clientY >= trashRect.top && e.clientY <= trashRect.bottom) {
+                    placedNotes.splice(draggingNoteIndex, 1);
+                    redrawAllNotes();
+                } else {
+                    // 松开时定位音符位置到最近格点
+                    const rect = canvas.getBoundingClientRect();
+                    const xPosition = e.clientX - rect.left;
+                    const yPosGlobal = e.clientY - rect.top;
+
+                    const staffIndex = Math.floor(yPosGlobal / staffHeight);
+                    if (staffIndex >= 0 && staffIndex < staffCount) {
+                        const staffTopY = staffIndex * staffHeight;
+                        const gridX = Math.floor(xPosition / 40) * 40 + 20;
+                        const gridY = Math.floor((yPosGlobal - staffTopY) / 10) * 10 + staffTopY + 5;
+                        placedNotes[draggingNoteIndex].x = gridX;
+                        placedNotes[draggingNoteIndex].y = gridY;
+                        placedNotes[draggingNoteIndex].staffIndex = staffIndex;
+                    }
+                    redrawAllNotes();
+                }
+                draggingNoteIndex = -1;
+                draggingFromCanvas = false;
+            }
+        });
+
+        // 拖动模拟: 按住音符合并拖动，更方便删除
+        canvas.addEventListener('mousemove', e => {
+            if(draggingFromCanvas && draggingNoteIndex >= 0) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                placedNotes[draggingNoteIndex].x = x;
+                placedNotes[draggingNoteIndex].y = y;
+
+                redrawAllNotes();
+            }
+        });
+    </script>
+</body>
+</html>
