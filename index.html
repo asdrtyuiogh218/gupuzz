@@ -12,7 +12,6 @@
             padding: 20px;
             box-sizing: border-box;
         }
-
         .container {
             width: 90vw;
             max-width: 620px;
@@ -24,13 +23,25 @@
             position: relative;
             box-sizing: border-box;
         }
-
         h1 {
             text-align: center;
             font-size: 1.4rem;
-            margin: 0 0 16px;
+            margin: 0 0 12px;
         }
-
+        #addStaffBtn {
+            display: block;
+            margin: 0 auto 12px;
+            padding: 6px 14px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #007bff;
+            color: #007bff;
+            border-radius: 4px;
+            background: white;
+            user-select: none;
+            text-align: center;
+            max-width: 160px;
+        }
         .note-container {
             display: flex;
             flex-wrap: wrap;
@@ -38,7 +49,6 @@
             gap: 6px;
             margin-bottom: 20px;
         }
-
         .note {
             flex: 0 0 70px;
             height: 42px;
@@ -53,9 +63,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
-            touch-action: none; /* 阻止触摸滚动，方便拖拽 */
+            touch-action: none;
         }
-
         canvas {
             display: block;
             width: 100%;
@@ -63,9 +72,8 @@
             border: 1px solid #000;
             cursor: crosshair;
             border-radius: 4px;
-            touch-action: none; /* 阻止触摸缩放滚动 */
+            touch-action: none;
         }
-
         #trashbin {
             position: fixed;
             right: 12px;
@@ -89,24 +97,6 @@
             border-color: #a00;
             color: #600;
         }
-
-        #downloadPdfBtn {
-            margin-bottom: 12px;
-            display: block;
-            width: 120px;
-            padding: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            border: 1px solid #007bff;
-            color: #007bff;
-            border-radius: 4px;
-            background: white;
-            user-select: none;
-            text-align: center;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
         @media (max-width: 480px) {
             .note {
                 flex: 0 0 55px;
@@ -124,22 +114,17 @@
                 font-size: 1.1rem;
                 margin-bottom: 12px;
             }
-            #downloadPdfBtn {
-                width: 100%;
+            #addStaffBtn {
+                max-width: 100%;
+                margin-bottom: 10px;
             }
         }
     </style>
-
-    <!-- 引入 jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="container">
     <h1>二十四节令鼓鼓谱制作</h1>
-
-    <!-- 新增PDF下载按钮 -->
-    <button id="downloadPdfBtn" title="将当前五线谱导出为PDF">以 PDF 下载</button>
-
+    <button id="addStaffBtn" title="点击新增一行五线谱">新增五线谱行</button>
     <div class="note-container">
         <!-- 传统音符 -->
         <div class="note" draggable="true" data-value="4">𝄽</div>
@@ -169,7 +154,6 @@
     <canvas id="scoreCanvas"></canvas>
 </div>
 
-<!-- 垃圾桶 -->
 <div id="trashbin" title="拖拽音符到这里删除">🗑️ 垃圾桶</div>
 
 <script>
@@ -177,27 +161,27 @@
     const canvas = document.getElementById('scoreCanvas');
     const ctx = canvas.getContext('2d');
     const trashbin = document.getElementById('trashbin');
+    const addStaffBtn = document.getElementById('addStaffBtn');
 
-    // 设定
-    const staffCount = 3;
+    // 可变行数，初始3行五线谱
+    let staffCount = 3;
     const staffHeight = 120;
     const lineSpacing = 20;
 
-    // 存放音符
+    // 存放已放置音符
     const placedNotes = [];
 
-    // 动态调整画布大小，保持宽高比为600x420基础比例
+    // 根据行数，调整画布尺寸和绘制
     function resizeCanvas() {
         const containerWidth = document.querySelector('.container').clientWidth;
         canvas.width = 600;
-        canvas.height = 420;
+        canvas.height = staffCount * staffHeight;
         canvas.style.width = containerWidth + 'px';
-        canvas.style.height = (containerWidth * 420 / 600) + 'px';
+        canvas.style.height = (containerWidth * canvas.height / canvas.width) + 'px';
         redrawAllNotes();
     }
 
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
 
     // 音符映射
     const noteMapping = {
@@ -205,11 +189,10 @@
         'R4': '𝄻', 'R2': '𝄼', 'R1': '𝄽', 'R0.5': '𝄾', 'R0.25': '𝄿', 'R0.125': '𝅀',
         'z': '左', 'y': '右', 'd': '地', 'g': '棒', 'he': 'he', 'ha': 'ha', 'ho': 'ho', 'sa': 'sa', 'hesa': 'hesa'
     };
-
     const mainNotes = ['4', '2', '1', '0.5', '0.25', '0.125','R4','R2','R1','R0.5','R0.25','R0.125'];
     const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
 
-    // 画五线谱
+    // 绘制五线谱
     function drawStaffs() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 1;
@@ -223,7 +206,6 @@
                 ctx.lineTo(canvas.width, y);
                 ctx.stroke();
             }
-            // 辅助虚线
             ctx.setLineDash([4, 4]);
             const auxTopY = topY + lineSpacing * 0.5;
             ctx.beginPath();
@@ -239,14 +221,14 @@
         }
     }
 
-    // 重新绘制所有音符（保持绘图与画布宽度比例）
+    // 重新绘制所有音符
     function redrawAllNotes() {
         drawStaffs();
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#000';
 
         const scaleX = canvas.width / 600;
-        const scaleY = canvas.height / 420;
+        const scaleY = canvas.height / (staffCount * staffHeight);
 
         placedNotes.forEach(note => {
             ctx.font = (note.fontSize * scaleX) + 'px serif';
@@ -254,7 +236,13 @@
         });
     }
 
-    // 鼠标拖拽拾取事件
+    // 新增五线谱行按钮事件
+    addStaffBtn.addEventListener('click', () => {
+        staffCount++;
+        resizeCanvas();
+    });
+
+    // 拖拽音符到画布
     notes.forEach(note => {
         note.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', note.dataset.value);
@@ -262,17 +250,9 @@
         });
     });
     canvas.addEventListener('dragover', e => e.preventDefault());
-    trashbin.addEventListener('dragover', e => {
-        e.preventDefault();
-        trashbin.classList.add('dragover');
-    });
-    trashbin.addEventListener('dragleave', e => {
-        trashbin.classList.remove('dragover');
-    });
     canvas.addEventListener('drop', e => {
         e.preventDefault();
         trashbin.classList.remove('dragover');
-
         const noteValue = e.dataTransfer.getData('text/plain');
         if (!noteValue) return;
 
@@ -280,16 +260,17 @@
         const xMouse = e.clientX - rect.left;
         const yMouse = e.clientY - rect.top;
 
-        const staffIndex = Math.floor(yMouse / (canvas.height / staffCount));
+        const staffHeightScaled = canvas.height / staffCount;
+        const staffIndex = Math.floor(yMouse / (rect.height / staffCount));
         if (staffIndex < 0 || staffIndex >= staffCount) return;
 
-        const staffTopY = staffIndex * (canvas.height / staffCount);
-
-        // 画布显示区域跟内部坐标换算
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
+
         const adjX = xMouse * scaleX;
         const adjY = yMouse * scaleY;
+
+        const staffTopY = staffIndex * staffHeight;
 
         const gridX = Math.floor(adjX / 40) * 40 + 20;
         const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
@@ -299,6 +280,15 @@
 
         placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue});
         redrawAllNotes();
+    });
+
+    // 拖拽垃圾桶相关
+    trashbin.addEventListener('dragover', e => {
+        e.preventDefault();
+        trashbin.classList.add('dragover');
+    });
+    trashbin.addEventListener('dragleave', e => {
+        trashbin.classList.remove('dragover');
     });
 
     // 鼠标拖动画布上的音符删除和移动
@@ -353,7 +343,6 @@
                     const staffTopY = staffIndex * staffHeight;
                     const gridX = Math.floor(adjX / 40) * 40 + 20;
                     const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
-
                     placedNotes[draggingNoteIndex].x = gridX;
                     placedNotes[draggingNoteIndex].y = gridY;
                     placedNotes[draggingNoteIndex].staffIndex = staffIndex;
@@ -381,7 +370,7 @@
         }
     });
 
-    // 手机触摸拖拽支持：拖动左侧音符到画布
+    // 手机拖拽支持：拖动左侧音符到画布
     let touchDraggingNoteValue = null;
     let touchDragging = false;
 
@@ -407,7 +396,6 @@
         const xTouch = touch.clientX - rect.left;
         const yTouch = touch.clientY - rect.top;
 
-        // 坐标比例转换
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         const adjX = xTouch * scaleX;
@@ -436,25 +424,8 @@
         touchDragging = false;
     }, {passive:false});
 
-    // PDF下载按钮功能实现
-    document.getElementById('downloadPdfBtn').addEventListener('click', () => {
-        const { jsPDF } = window.jspdf;
-        // 同画布尺寸生成PDF页面
-        const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'px',
-            format: [canvas.width, canvas.height]
-        });
-
-        // 将画布转为PNG图片
-        const imgData = canvas.toDataURL('image/png');
-
-        // 添加到pdf中铺满整页
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-
-        // 保存文件
-        pdf.save('score.pdf');
-    });
+    // 初始调整画布大小，绘制基础三行
+    resizeCanvas();
 </script>
 </body>
 </html>
