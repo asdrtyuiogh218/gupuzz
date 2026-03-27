@@ -53,6 +53,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
+            touch-action: none; /* 禁用默认触摸动作避免干扰拖动 */
         }
 
         canvas {
@@ -62,6 +63,7 @@
             border: 1px solid #000;
             cursor: crosshair;
             border-radius: 4px;
+            touch-action: none; /* 禁用默认缩放滚动 */
         }
 
         #trashbin {
@@ -80,6 +82,7 @@
             user-select: none;
             transition: background-color 0.3s, border-color 0.3s;
             z-index: 999;
+            touch-action: none;
         }
         #trashbin.dragover {
             background-color: #faa;
@@ -224,7 +227,7 @@
             });
         }
 
-        // 拖动音符开始
+        // 拖动音符开始（鼠标拖拽）
         notes.forEach(note => {
             note.addEventListener('dragstart', e => {
                 e.dataTransfer.setData('text/plain', note.dataset.value);
@@ -262,7 +265,7 @@
             const scaleX = canvas.width / 600;
             const scaleY = canvas.height / 420;
 
-            // 实际位置换算回600x420比例
+            // 位置换算回600x420比例
             const adjX = xMouse * (600 / canvas.width);
             const adjY = yMouse * (420 / canvas.height);
 
@@ -277,7 +280,7 @@
             redrawAllNotes();
         });
 
-        // 拖动画布上的音符删除和移动
+        // 拖动画布上的音符删除和移动（鼠标）
         let draggingNoteIndex = -1;
         let draggingFromCanvas = false;
 
@@ -356,6 +359,58 @@
                 redrawAllNotes();
             }
         });
+
+        // 手机触摸拖拽支持
+        let touchDraggingNoteValue = null;
+        let touchDragging = false;
+
+        notes.forEach(note => {
+            note.addEventListener('touchstart', e => {
+                e.preventDefault();
+                touchDraggingNoteValue = note.dataset.value;
+                touchDragging = true;
+            }, {passive:false});
+        });
+
+        canvas.addEventListener('touchmove', e => {
+            if(!touchDragging) return;
+            e.preventDefault();
+        }, {passive:false});
+
+        canvas.addEventListener('touchend', e => {
+            if(!touchDragging) return;
+            e.preventDefault();
+
+            const touch = e.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const xMouse = touch.clientX - rect.left;
+            const yMouse = touch.clientY - rect.top;
+
+            const staffIndex = Math.floor(yMouse / (canvas.height / staffCount));
+            if (staffIndex < 0 || staffIndex >= staffCount) {
+                touchDragging = false;
+                touchDraggingNoteValue = null;
+                return;
+            }
+
+            const staffTopY = staffIndex * (canvas.height / staffCount);
+
+            const adjX = xMouse * (600 / canvas.width);
+            const adjY = yMouse * (420 / canvas.height);
+
+            const gridX = Math.floor(adjX / 40) * 40 + 20;
+            const gridY = Math.floor((adjY - staffTopY * (420 / canvas.height)) / 10) * 10 + staffTopY * (420 / canvas.height) + 5;
+
+            const noteSymbol = noteMapping[touchDraggingNoteValue] || touchDraggingNoteValue;
+            let fontSize = mainNotes.includes(touchDraggingNoteValue) ? 40 : (auxNotes.includes(touchDraggingNoteValue) ? 20 : 30);
+
+            placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue: touchDraggingNoteValue});
+            redrawAllNotes();
+
+            touchDraggingNoteValue = null;
+            touchDragging = false;
+        }, {passive:false});
+
     </script>
 </body>
 </html>
