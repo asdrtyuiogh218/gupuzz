@@ -90,6 +90,23 @@
             color: #600;
         }
 
+        #downloadPdfBtn {
+            margin-bottom: 12px;
+            display: block;
+            width: 120px;
+            padding: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #007bff;
+            color: #007bff;
+            border-radius: 4px;
+            background: white;
+            user-select: none;
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         @media (max-width: 480px) {
             .note {
                 flex: 0 0 55px;
@@ -107,12 +124,22 @@
                 font-size: 1.1rem;
                 margin-bottom: 12px;
             }
+            #downloadPdfBtn {
+                width: 100%;
+            }
         }
     </style>
+
+    <!-- 引入 jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="container">
     <h1>二十四节令鼓鼓谱制作</h1>
+
+    <!-- 新增PDF下载按钮 -->
+    <button id="downloadPdfBtn" title="将当前五线谱导出为PDF">以 PDF 下载</button>
+
     <div class="note-container">
         <!-- 传统音符 -->
         <div class="note" draggable="true" data-value="4">𝄽</div>
@@ -408,6 +435,26 @@
         touchDraggingNoteValue = null;
         touchDragging = false;
     }, {passive:false});
+
+    // PDF下载按钮功能实现
+    document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+        const { jsPDF } = window.jspdf;
+        // 同画布尺寸生成PDF页面
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [canvas.width, canvas.height]
+        });
+
+        // 将画布转为PNG图片
+        const imgData = canvas.toDataURL('image/png');
+
+        // 添加到pdf中铺满整页
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+        // 保存文件
+        pdf.save('score.pdf');
+    });
 </script>
 </body>
 </html>
