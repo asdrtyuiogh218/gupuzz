@@ -53,7 +53,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
-            touch-action: none; /* 禁用默认触摸动作避免干扰拖动 */
+            touch-action: none; /* 阻止触摸滚动，方便拖拽 */
         }
 
         canvas {
@@ -63,7 +63,7 @@
             border: 1px solid #000;
             cursor: crosshair;
             border-radius: 4px;
-            touch-action: none; /* 禁用默认缩放滚动 */
+            touch-action: none; /* 阻止触摸缩放滚动 */
         }
 
         #trashbin {
@@ -111,306 +111,303 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>二十四节令鼓鼓谱制作</h1>
-        <div class="note-container">
-            <!-- 传统音符 -->
-            <div class="note" draggable="true" data-value="4">𝄽</div>
-            <div class="note" draggable="true" data-value="2">𝄼</div>
-            <div class="note" draggable="true" data-value="1">♩</div>
-            <div class="note" draggable="true" data-value="0.5">♪</div>
-            <div class="note" draggable="true" data-value="0.25">♫</div>
-            <div class="note" draggable="true" data-value="0.125">♬</div>
-            <div class="note" draggable="true" data-value="R4">𝄻</div>
-            <div class="note" draggable="true" data-value="R2">𝄼</div>
-            <div class="note" draggable="true" data-value="R1">𝄽</div>
-            <div class="note" draggable="true" data-value="R0.5">𝄾</div>
-            <div class="note" draggable="true" data-value="R0.25">𝄿</div>
-            <div class="note" draggable="true" data-value="R0.125">𝅀</div>
+<div class="container">
+    <h1>二十四节令鼓鼓谱制作</h1>
+    <div class="note-container">
+        <!-- 传统音符 -->
+        <div class="note" draggable="true" data-value="4">𝄽</div>
+        <div class="note" draggable="true" data-value="2">𝄼</div>
+        <div class="note" draggable="true" data-value="1">♩</div>
+        <div class="note" draggable="true" data-value="0.5">♪</div>
+        <div class="note" draggable="true" data-value="0.25">♫</div>
+        <div class="note" draggable="true" data-value="0.125">♬</div>
+        <div class="note" draggable="true" data-value="R4">𝄻</div>
+        <div class="note" draggable="true" data-value="R2">𝄼</div>
+        <div class="note" draggable="true" data-value="R1">𝄽</div>
+        <div class="note" draggable="true" data-value="R0.5">𝄾</div>
+        <div class="note" draggable="true" data-value="R0.25">𝄿</div>
+        <div class="note" draggable="true" data-value="R0.125">𝅀</div>
 
-            <!-- 二十四节令鼓辅助符号 -->
-            <div class="note" draggable="true" data-value="z">左</div>
-            <div class="note" draggable="true" data-value="y">右</div>
-            <div class="note" draggable="true" data-value="d">地</div>
-            <div class="note" draggable="true" data-value="g">棒</div>
-            <div class="note" draggable="true" data-value="he">he</div>
-            <div class="note" draggable="true" data-value="ha">ha</div>
-            <div class="note" draggable="true" data-value="ho">ho</div>
-            <div class="note" draggable="true" data-value="sa">sa</div>
-            <div class="note" draggable="true" data-value="hesa">hesa</div>
-        </div>
-        <canvas id="scoreCanvas"></canvas>
+        <!-- 二十四节令鼓辅助符号 -->
+        <div class="note" draggable="true" data-value="z">左</div>
+        <div class="note" draggable="true" data-value="y">右</div>
+        <div class="note" draggable="true" data-value="d">地</div>
+        <div class="note" draggable="true" data-value="g">棒</div>
+        <div class="note" draggable="true" data-value="he">he</div>
+        <div class="note" draggable="true" data-value="ha">ha</div>
+        <div class="note" draggable="true" data-value="ho">ho</div>
+        <div class="note" draggable="true" data-value="sa">sa</div>
+        <div class="note" draggable="true" data-value="hesa">hesa</div>
     </div>
+    <canvas id="scoreCanvas"></canvas>
+</div>
 
-    <!-- 垃圾桶 -->
-    <div id="trashbin" title="拖拽音符到这里删除">🗑️ 垃圾桶</div>
+<!-- 垃圾桶 -->
+<div id="trashbin" title="拖拽音符到这里删除">🗑️ 垃圾桶</div>
 
-    <script>
-        const notes = document.querySelectorAll('.note');
-        const canvas = document.getElementById('scoreCanvas');
-        const ctx = canvas.getContext('2d');
-        const trashbin = document.getElementById('trashbin');
+<script>
+    const notes = document.querySelectorAll('.note');
+    const canvas = document.getElementById('scoreCanvas');
+    const ctx = canvas.getContext('2d');
+    const trashbin = document.getElementById('trashbin');
 
-        // 设定
-        const staffCount = 3;
-        const staffHeight = 120;
-        const lineSpacing = 20;
+    // 设定
+    const staffCount = 3;
+    const staffHeight = 120;
+    const lineSpacing = 20;
 
-        // 存放音符
-        const placedNotes = [];
+    // 存放音符
+    const placedNotes = [];
 
-        // 动态调整画布大小，保持宽高比为600x420基础比例
-        function resizeCanvas() {
-            const containerWidth = document.querySelector('.container').clientWidth;
-            canvas.width = 600;
-            canvas.height = 420;
-            canvas.style.width = containerWidth + 'px';
-            canvas.style.height = (containerWidth * 420 / 600) + 'px';
-            redrawAllNotes();
-        }
+    // 动态调整画布大小，保持宽高比为600x420基础比例
+    function resizeCanvas() {
+        const containerWidth = document.querySelector('.container').clientWidth;
+        canvas.width = 600;
+        canvas.height = 420;
+        canvas.style.width = containerWidth + 'px';
+        canvas.style.height = (containerWidth * 420 / 600) + 'px';
+        redrawAllNotes();
+    }
 
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-        // 音符映射
-        const noteMapping = {
-            '4': '𝄽', '2': '𝄼', '1': '♩', '0.5': '♪', '0.25': '♫', '0.125': '♬',
-            'R4': '𝄻', 'R2': '𝄼', 'R1': '𝄽', 'R0.5': '𝄾', 'R0.25': '𝄿', 'R0.125': '𝅀',
-            'z': '左', 'y': '右', 'd': '地', 'g': '棒', 'he': 'he', 'ha': 'ha', 'ho': 'ho', 'sa': 'sa', 'hesa': 'hesa'
-        };
+    // 音符映射
+    const noteMapping = {
+        '4': '𝄽', '2': '𝄼', '1': '♩', '0.5': '♪', '0.25': '♫', '0.125': '♬',
+        'R4': '𝄻', 'R2': '𝄼', 'R1': '𝄽', 'R0.5': '𝄾', 'R0.25': '𝄿', 'R0.125': '𝅀',
+        'z': '左', 'y': '右', 'd': '地', 'g': '棒', 'he': 'he', 'ha': 'ha', 'ho': 'ho', 'sa': 'sa', 'hesa': 'hesa'
+    };
 
-        const mainNotes = ['4', '2', '1', '0.5', '0.25', '0.125','R4','R2','R1','R0.5','R0.25','R0.125'];
-        const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
+    const mainNotes = ['4', '2', '1', '0.5', '0.25', '0.125','R4','R2','R1','R0.5','R0.25','R0.125'];
+    const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
 
-        // 画五线谱
-        function drawStaffs() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#000';
-            for(let staffIndex = 0; staffIndex < staffCount; staffIndex++) {
-                const topY = staffIndex * staffHeight;
-                for(let i = 0; i < 5; i++) {
-                    const y = topY + (i + 1) * lineSpacing;
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(canvas.width, y);
-                    ctx.stroke();
-                }
-                // 辅助虚线
-                ctx.setLineDash([4, 4]);
-                const auxTopY = topY + lineSpacing * 0.5;
+    // 画五线谱
+    function drawStaffs() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#000';
+        for(let staffIndex = 0; staffIndex < staffCount; staffIndex++) {
+            const topY = staffIndex * staffHeight;
+            for(let i = 0; i < 5; i++) {
+                const y = topY + (i + 1) * lineSpacing;
                 ctx.beginPath();
-                ctx.moveTo(0, auxTopY);
-                ctx.lineTo(canvas.width, auxTopY);
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
                 ctx.stroke();
-                const auxBottomY = topY + lineSpacing * 6;
-                ctx.beginPath();
-                ctx.moveTo(0, auxBottomY);
-                ctx.lineTo(canvas.width, auxBottomY);
-                ctx.stroke();
-                ctx.setLineDash([]);
+            }
+            // 辅助虚线
+            ctx.setLineDash([4, 4]);
+            const auxTopY = topY + lineSpacing * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, auxTopY);
+            ctx.lineTo(canvas.width, auxTopY);
+            ctx.stroke();
+            const auxBottomY = topY + lineSpacing * 6;
+            ctx.beginPath();
+            ctx.moveTo(0, auxBottomY);
+            ctx.lineTo(canvas.width, auxBottomY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // 重新绘制所有音符（保持绘图与画布宽度比例）
+    function redrawAllNotes() {
+        drawStaffs();
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000';
+
+        const scaleX = canvas.width / 600;
+        const scaleY = canvas.height / 420;
+
+        placedNotes.forEach(note => {
+            ctx.font = (note.fontSize * scaleX) + 'px serif';
+            ctx.fillText(note.symbol, note.x * scaleX, note.y * scaleY);
+        });
+    }
+
+    // 鼠标拖拽拾取事件
+    notes.forEach(note => {
+        note.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', note.dataset.value);
+            e.dataTransfer.setData('source', 'palette');
+        });
+    });
+    canvas.addEventListener('dragover', e => e.preventDefault());
+    trashbin.addEventListener('dragover', e => {
+        e.preventDefault();
+        trashbin.classList.add('dragover');
+    });
+    trashbin.addEventListener('dragleave', e => {
+        trashbin.classList.remove('dragover');
+    });
+    canvas.addEventListener('drop', e => {
+        e.preventDefault();
+        trashbin.classList.remove('dragover');
+
+        const noteValue = e.dataTransfer.getData('text/plain');
+        if (!noteValue) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const xMouse = e.clientX - rect.left;
+        const yMouse = e.clientY - rect.top;
+
+        const staffIndex = Math.floor(yMouse / (canvas.height / staffCount));
+        if (staffIndex < 0 || staffIndex >= staffCount) return;
+
+        const staffTopY = staffIndex * (canvas.height / staffCount);
+
+        // 画布显示区域跟内部坐标换算
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const adjX = xMouse * scaleX;
+        const adjY = yMouse * scaleY;
+
+        const gridX = Math.floor(adjX / 40) * 40 + 20;
+        const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
+
+        const noteSymbol = noteMapping[noteValue] || noteValue;
+        let fontSize = mainNotes.includes(noteValue) ? 40 : (auxNotes.includes(noteValue) ? 20 : 30);
+
+        placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue});
+        redrawAllNotes();
+    });
+
+    // 鼠标拖动画布上的音符删除和移动
+    let draggingNoteIndex = -1;
+    let draggingFromCanvas = false;
+
+    function distance(x1,y1,x2,y2) {
+        return Math.sqrt((x1 - x2)**2 + (y1 - y2)**2);
+    }
+
+    canvas.addEventListener('mousedown', e => {
+        const rect = canvas.getBoundingClientRect();
+        const xMouse = e.clientX - rect.left;
+        const yMouse = e.clientY - rect.top;
+
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const adjX = xMouse * scaleX;
+        const adjY = yMouse * scaleY;
+
+        for(let i=0; i<placedNotes.length; i++) {
+            let n = placedNotes[i];
+            if(distance(n.x, n.y, adjX, adjY) < 30) {
+                draggingNoteIndex = i;
+                draggingFromCanvas = true;
+                break;
             }
         }
+    });
 
-        // 重新绘制所有音符（保持绘图与画布宽度比例）
-        function redrawAllNotes() {
-            drawStaffs();
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#000';
-
-            const scaleX = canvas.width / 600;
-            const scaleY = canvas.height / 420;
-
-            placedNotes.forEach(note => {
-                ctx.font = (note.fontSize * scaleX) + 'px serif';
-                ctx.fillText(note.symbol, note.x * scaleX, note.y * scaleY);
-            });
-        }
-
-        // 拖动音符开始（鼠标拖拽）
-        notes.forEach(note => {
-            note.addEventListener('dragstart', e => {
-                e.dataTransfer.setData('text/plain', note.dataset.value);
-                e.dataTransfer.setData('source', 'palette');
-            });
-        });
-
-        canvas.addEventListener('dragover', e => e.preventDefault());
-        trashbin.addEventListener('dragover', e => {
-            e.preventDefault();
-            trashbin.classList.add('dragover');
-        });
-        trashbin.addEventListener('dragleave', e => {
-            trashbin.classList.remove('dragover');
-        });
-
-        canvas.addEventListener('drop', e => {
-            e.preventDefault();
-            trashbin.classList.remove('dragover');
-
-            const noteValue = e.dataTransfer.getData('text/plain');
-            if (!noteValue) return;
-
-            const rect = canvas.getBoundingClientRect();
-
-            const xMouse = e.clientX - rect.left;
-            const yMouse = e.clientY - rect.top;
-
-            const staffIndex = Math.floor(yMouse / (canvas.height / staffCount));
-            if (staffIndex < 0 || staffIndex >= staffCount) return;
-
-            const staffTopY = staffIndex * (canvas.height / staffCount);
-
-            // 横向40px网格比例换算
-            const scaleX = canvas.width / 600;
-            const scaleY = canvas.height / 420;
-
-            // 位置换算回600x420比例
-            const adjX = xMouse * (600 / canvas.width);
-            const adjY = yMouse * (420 / canvas.height);
-
-            const gridX = Math.floor(adjX / 40) * 40 + 20;
-            const gridY = Math.floor((adjY - staffTopY * (420 / canvas.height)) / 10) * 10 + staffTopY * (420 / canvas.height) + 5;
-
-            const noteSymbol = noteMapping[noteValue] || noteValue;
-
-            let fontSize = mainNotes.includes(noteValue) ? 40 : (auxNotes.includes(noteValue) ? 20 : 30);
-
-            placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue});
-            redrawAllNotes();
-        });
-
-        // 拖动画布上的音符删除和移动（鼠标）
-        let draggingNoteIndex = -1;
-        let draggingFromCanvas = false;
-
-        function distance(x1,y1,x2,y2) {
-            return Math.sqrt((x1 - x2)**2 + (y1 - y2)**2);
-        }
-
-        canvas.addEventListener('mousedown', e => {
-            const rect = canvas.getBoundingClientRect();
-            const xMouse = e.clientX - rect.left;
-            const yMouse = e.clientY - rect.top;
-
-            const scaleX = 600 / canvas.width;
-            const scaleY = 420 / canvas.height;
-
-            const adjX = xMouse * scaleX;
-            const adjY = yMouse * scaleY;
-
-            for(let i=0; i<placedNotes.length; i++) {
-                let n = placedNotes[i];
-                if(distance(n.x, n.y, adjX, adjY) < 30) {
-                    draggingNoteIndex = i;
-                    draggingFromCanvas = true;
-                    break;
-                }
-            }
-        });
-
-        window.addEventListener('mouseup', e => {
-            if(draggingFromCanvas && draggingNoteIndex >= 0) {
-                const trashRect = trashbin.getBoundingClientRect();
-                if(e.clientX >= trashRect.left && e.clientX <= trashRect.right &&
-                    e.clientY >= trashRect.top && e.clientY <= trashRect.bottom) {
-                    placedNotes.splice(draggingNoteIndex, 1);
-                    redrawAllNotes();
-                } else {
-                    const rect = canvas.getBoundingClientRect();
-                    let xMouse = e.clientX - rect.left;
-                    let yMouse = e.clientY - rect.top;
-
-                    const scaleX = 600 / canvas.width;
-                    const scaleY = 420 / canvas.height;
-
-                    let adjX = xMouse * scaleX;
-                    let adjY = yMouse * scaleY;
-
-                    const staffIndex = Math.floor(adjY / staffHeight);
-                    if (staffIndex >= 0 && staffIndex < staffCount) {
-                        const staffTopY = staffIndex * staffHeight;
-                        const gridX = Math.floor(adjX / 40) * 40 + 20;
-                        const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
-
-                        placedNotes[draggingNoteIndex].x = gridX;
-                        placedNotes[draggingNoteIndex].y = gridY;
-                        placedNotes[draggingNoteIndex].staffIndex = staffIndex;
-                    }
-                    redrawAllNotes();
-                }
-                draggingNoteIndex = -1;
-                draggingFromCanvas = false;
-            }
-        });
-
-        canvas.addEventListener('mousemove', e => {
-            if(draggingFromCanvas && draggingNoteIndex >= 0) {
+    window.addEventListener('mouseup', e => {
+        if(draggingFromCanvas && draggingNoteIndex >= 0) {
+            const trashRect = trashbin.getBoundingClientRect();
+            if(e.clientX >= trashRect.left && e.clientX <= trashRect.right &&
+                e.clientY >= trashRect.top && e.clientY <= trashRect.bottom) {
+                placedNotes.splice(draggingNoteIndex, 1);
+                redrawAllNotes();
+            } else {
                 const rect = canvas.getBoundingClientRect();
                 let xMouse = e.clientX - rect.left;
                 let yMouse = e.clientY - rect.top;
 
-                const scaleX = 600 / canvas.width;
-                const scaleY = 420 / canvas.height;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
 
-                placedNotes[draggingNoteIndex].x = xMouse * scaleX;
-                placedNotes[draggingNoteIndex].y = yMouse * scaleY;
+                let adjX = xMouse * scaleX;
+                let adjY = yMouse * scaleY;
 
+                const staffIndex = Math.floor(adjY / staffHeight);
+                if (staffIndex >= 0 && staffIndex < staffCount) {
+                    const staffTopY = staffIndex * staffHeight;
+                    const gridX = Math.floor(adjX / 40) * 40 + 20;
+                    const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
+
+                    placedNotes[draggingNoteIndex].x = gridX;
+                    placedNotes[draggingNoteIndex].y = gridY;
+                    placedNotes[draggingNoteIndex].staffIndex = staffIndex;
+                }
                 redrawAllNotes();
             }
-        });
+            draggingNoteIndex = -1;
+            draggingFromCanvas = false;
+        }
+    });
 
-        // 手机触摸拖拽支持
-        let touchDraggingNoteValue = null;
-        let touchDragging = false;
-
-        notes.forEach(note => {
-            note.addEventListener('touchstart', e => {
-                e.preventDefault();
-                touchDraggingNoteValue = note.dataset.value;
-                touchDragging = true;
-            }, {passive:false});
-        });
-
-        canvas.addEventListener('touchmove', e => {
-            if(!touchDragging) return;
-            e.preventDefault();
-        }, {passive:false});
-
-        canvas.addEventListener('touchend', e => {
-            if(!touchDragging) return;
-            e.preventDefault();
-
-            const touch = e.changedTouches[0];
+    canvas.addEventListener('mousemove', e => {
+        if(draggingFromCanvas && draggingNoteIndex >= 0) {
             const rect = canvas.getBoundingClientRect();
-            const xMouse = touch.clientX - rect.left;
-            const yMouse = touch.clientY - rect.top;
+            let xMouse = e.clientX - rect.left;
+            let yMouse = e.clientY - rect.top;
 
-            const staffIndex = Math.floor(yMouse / (canvas.height / staffCount));
-            if (staffIndex < 0 || staffIndex >= staffCount) {
-                touchDragging = false;
-                touchDraggingNoteValue = null;
-                return;
-            }
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
 
-            const staffTopY = staffIndex * (canvas.height / staffCount);
+            placedNotes[draggingNoteIndex].x = xMouse * scaleX;
+            placedNotes[draggingNoteIndex].y = yMouse * scaleY;
 
-            const adjX = xMouse * (600 / canvas.width);
-            const adjY = yMouse * (420 / canvas.height);
-
-            const gridX = Math.floor(adjX / 40) * 40 + 20;
-            const gridY = Math.floor((adjY - staffTopY * (420 / canvas.height)) / 10) * 10 + staffTopY * (420 / canvas.height) + 5;
-
-            const noteSymbol = noteMapping[touchDraggingNoteValue] || touchDraggingNoteValue;
-            let fontSize = mainNotes.includes(touchDraggingNoteValue) ? 40 : (auxNotes.includes(touchDraggingNoteValue) ? 20 : 30);
-
-            placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue: touchDraggingNoteValue});
             redrawAllNotes();
+        }
+    });
 
-            touchDraggingNoteValue = null;
-            touchDragging = false;
+    // 手机触摸拖拽支持：拖动左侧音符到画布
+    let touchDraggingNoteValue = null;
+    let touchDragging = false;
+
+    notes.forEach(note => {
+        note.addEventListener('touchstart', e => {
+            e.preventDefault();
+            touchDraggingNoteValue = note.dataset.value;
+            touchDragging = true;
         }, {passive:false});
+    });
 
-    </script>
+    canvas.addEventListener('touchmove', e => {
+        if(!touchDragging) return;
+        e.preventDefault();
+    }, {passive:false});
+
+    canvas.addEventListener('touchend', e => {
+        if(!touchDragging) return;
+        e.preventDefault();
+
+        const touch = e.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+        const xTouch = touch.clientX - rect.left;
+        const yTouch = touch.clientY - rect.top;
+
+        // 坐标比例转换
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const adjX = xTouch * scaleX;
+        const adjY = yTouch * scaleY;
+
+        const staffHeightScaled = canvas.height / staffCount;
+        const staffIndex = Math.floor(adjY / staffHeightScaled);
+        if (staffIndex < 0 || staffIndex >= staffCount) {
+            touchDragging = false;
+            touchDraggingNoteValue = null;
+            return;
+        }
+
+        const staffTopY = staffIndex * staffHeightScaled;
+
+        const gridX = Math.floor(adjX / 40) * 40 + 20;
+        const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
+
+        const noteSymbol = noteMapping[touchDraggingNoteValue] || touchDraggingNoteValue;
+        let fontSize = mainNotes.includes(touchDraggingNoteValue) ? 40 : (auxNotes.includes(touchDraggingNoteValue) ? 20 : 30);
+
+        placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue: touchDraggingNoteValue});
+        redrawAllNotes();
+
+        touchDraggingNoteValue = null;
+        touchDragging = false;
+    }, {passive:false});
+</script>
 </body>
 </html>
