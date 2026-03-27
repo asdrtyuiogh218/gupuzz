@@ -72,11 +72,11 @@
         canvas {
             display: block;
             width: 100%;
-            height: auto;
             border: 1px solid #000;
             cursor: crosshair;
             border-radius: 4px;
             touch-action: none;
+            user-select:none;
         }
         #trashbin {
             position: fixed;
@@ -160,6 +160,7 @@
     </div>
 
     <canvas id="scoreCanvas"></canvas>
+
     <button id="downloadPdfBtn" title="导出当前五线谱为 PDF">以 PDF 下载</button>
 </div>
 
@@ -173,14 +174,14 @@
     const addStaffBtn = document.getElementById('addStaffBtn');
     const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 
-    // 初始五线谱行数
+    // 初始五线谱行数，行高固定
     let staffCount = 3;
     const staffHeight = 120;
     const lineSpacing = 20;
 
     const placedNotes = [];
 
-    // 音符映射表
+    // 音符映射及分组
     const noteMapping = {
         '4': '𝄽', '2': '𝄼', '1': '♩', '0.5': '♪', '0.25': '♫', '0.125': '♬',
         'R4': '𝄻', 'R2': '𝄼', 'R1': '𝄽', 'R0.5': '𝄾', 'R0.25': '𝄿', 'R0.125': '𝅀',
@@ -189,23 +190,27 @@
     const mainNotes = ['4', '2', '1', '0.5', '0.25', '0.125','R4','R2','R1','R0.5','R0.25','R0.125'];
     const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
 
-    // 调整画布尺寸根据行数动态高
     function resizeCanvas() {
         const containerWidth = document.querySelector('.container').clientWidth;
-        canvas.width = 600;
+        // canvas宽度等于容器宽度（物理像素）
+        // 高度为行数乘以固定行高
+        canvas.width = containerWidth;
         canvas.height = staffCount * staffHeight;
+
+        // 改变canvas显示尺寸和画布分辨率一致，保证坐标映射准确
         canvas.style.width = containerWidth + 'px';
-        canvas.style.height = (containerWidth * canvas.height / canvas.width) + 'px';
+        canvas.style.height = canvas.height + 'px';
+
         redrawAllNotes();
     }
 
     window.addEventListener('resize', resizeCanvas);
 
-    // 绘制五线谱
     function drawStaffs() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#000';
+
         for(let staffIndex = 0; staffIndex < staffCount; staffIndex++) {
             const topY = staffIndex * staffHeight;
             for(let i = 0; i < 5; i++) {
@@ -216,42 +221,40 @@
                 ctx.stroke();
             }
             ctx.setLineDash([4, 4]);
+            // 辅助虚线
             const auxTopY = topY + lineSpacing * 0.5;
             ctx.beginPath();
             ctx.moveTo(0, auxTopY);
             ctx.lineTo(canvas.width, auxTopY);
             ctx.stroke();
+
             const auxBottomY = topY + lineSpacing * 6;
             ctx.beginPath();
             ctx.moveTo(0, auxBottomY);
             ctx.lineTo(canvas.width, auxBottomY);
             ctx.stroke();
+
             ctx.setLineDash([]);
         }
     }
 
-    // 重新绘制所有音符
     function redrawAllNotes() {
         drawStaffs();
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#000';
 
-        const scaleX = canvas.width / 600;
-        const scaleY = canvas.height / (staffCount * staffHeight);
-
         placedNotes.forEach(note => {
-            ctx.font = (note.fontSize * scaleX) + 'px serif';
-            ctx.fillText(note.symbol, note.x * scaleX, note.y * scaleY);
+            ctx.font = note.fontSize + 'px serif';
+            ctx.fillText(note.symbol, note.x, note.y);
         });
     }
 
-    // 新增五线谱行
     addStaffBtn.addEventListener('click', () => {
         staffCount++;
         resizeCanvas();
     });
 
-    // 拖拽音符到画布
+    // 拖拽从音符面板拖入canvas
     notes.forEach(note => {
         note.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', note.dataset.value);
@@ -266,33 +269,33 @@
         trashbin.classList.remove('dragover');
 
         const noteValue = e.dataTransfer.getData('text/plain');
-        if (!noteValue) return;
+        if(!noteValue) return;
 
         const rect = canvas.getBoundingClientRect();
         const xMouse = e.clientX - rect.left;
         const yMouse = e.clientY - rect.top;
 
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        const adjX = xMouse * scaleX;
-        const adjY = yMouse * scaleY;
-
-        const staffIndex = Math.floor(adjY / staffHeight);
-        if (staffIndex < 0 || staffIndex >= staffCount) return;
+        // 计算音符所在五线谱行数
+        const staffIndex = Math.floor(yMouse / staffHeight);
+        if(staffIndex < 0 || staffIndex >= staffCount) return;
 
         const staffTopY = staffIndex * staffHeight;
-        const gridX = Math.floor(adjX / 40) * 40 + 20;
-        const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
+
+        // 网格对齐，x以40像素为单位，中间偏移20使不靠边
+        const gridX = Math.floor(xMouse / 40) * 40 + 20;
+        const gridY = Math.floor((yMouse - staffTopY) / 10) * 10 + staffTopY + 5;
 
         const noteSymbol = noteMapping[noteValue] || noteValue;
-        let fontSize = mainNotes.includes(noteValue) ? 40 : (auxNotes.includes(noteValue) ? 20 : 30);
 
-        placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue });
+        let fontSize = 30;
+        if(mainNotes.includes(noteValue)) fontSize = 40;
+        else if(auxNotes.includes(noteValue)) fontSize = 20;
+
+        placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue});
         redrawAllNotes();
     });
 
-    // 拖拽垃圾桶事件
+    // 拖拽垃圾桶相关
     trashbin.addEventListener('dragover', e => {
         e.preventDefault();
         trashbin.classList.add('dragover');
@@ -301,12 +304,12 @@
         trashbin.classList.remove('dragover');
     });
 
-    // 鼠标拖动画布音符移动与删除
+    // 鼠标拖拽音符移动和删除
     let draggingNoteIndex = -1;
     let draggingFromCanvas = false;
 
-    function distance(x1,y1,x2,y2) {
-        return Math.sqrt((x1 - x2)**2 + (y1 - y2)**2);
+    function distance(x1,y1,x2,y2){
+        return Math.sqrt((x1-x2)**2 + (y1-y2)**2);
     }
 
     canvas.addEventListener('mousedown', e => {
@@ -314,15 +317,9 @@
         const xMouse = e.clientX - rect.left;
         const yMouse = e.clientY - rect.top;
 
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        const adjX = xMouse * scaleX;
-        const adjY = yMouse * scaleY;
-
-        for(let i = 0; i < placedNotes.length; i++) {
+        for(let i=0;i<placedNotes.length;i++){
             let n = placedNotes[i];
-            if(distance(n.x, n.y, adjX, adjY) < 30) {
+            if(distance(n.x, n.y, xMouse, yMouse) < 30){
                 draggingNoteIndex = i;
                 draggingFromCanvas = true;
                 break;
@@ -336,24 +333,18 @@
             if(e.clientX >= trashRect.left && e.clientX <= trashRect.right &&
                e.clientY >= trashRect.top && e.clientY <= trashRect.bottom){
                 // 删除音符
-                placedNotes.splice(draggingNoteIndex, 1);
+                placedNotes.splice(draggingNoteIndex,1);
                 redrawAllNotes();
             }else{
-                // 移动音符
                 const rect = canvas.getBoundingClientRect();
                 let xMouse = e.clientX - rect.left;
                 let yMouse = e.clientY - rect.top;
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                let adjX = xMouse * scaleX;
-                let adjY = yMouse * scaleY;
 
-                const staffIndex = Math.floor(adjY / staffHeight);
-                if(staffIndex >= 0 && staffIndex < staffCount){
+                const staffIndex = Math.floor(yMouse / staffHeight);
+                if(staffIndex >=0 && staffIndex < staffCount){
                     const staffTopY = staffIndex * staffHeight;
-                    const gridX = Math.floor(adjX / 40) * 40 + 20;
-                    const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
-
+                    const gridX = Math.floor(xMouse / 40) * 40 + 20;
+                    const gridY = Math.floor((yMouse - staffTopY) / 10) * 10 + staffTopY + 5;
                     placedNotes[draggingNoteIndex].x = gridX;
                     placedNotes[draggingNoteIndex].y = gridY;
                     placedNotes[draggingNoteIndex].staffIndex = staffIndex;
@@ -370,17 +361,15 @@
             const rect = canvas.getBoundingClientRect();
             let xMouse = e.clientX - rect.left;
             let yMouse = e.clientY - rect.top;
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
 
-            placedNotes[draggingNoteIndex].x = xMouse * scaleX;
-            placedNotes[draggingNoteIndex].y = yMouse * scaleY;
+            placedNotes[draggingNoteIndex].x = xMouse;
+            placedNotes[draggingNoteIndex].y = yMouse;
 
             redrawAllNotes();
         }
     });
 
-    // 触摸支持：拖动左侧音符到画布
+    // 触摸拖拽支持
     let touchDraggingNoteValue = null;
     let touchDragging = false;
 
@@ -406,12 +395,7 @@
         const xTouch = touch.clientX - rect.left;
         const yTouch = touch.clientY - rect.top;
 
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const adjX = xTouch * scaleX;
-        const adjY = yTouch * scaleY;
-
-        const staffIndex = Math.floor(adjY / staffHeight);
+        const staffIndex = Math.floor(yTouch / staffHeight);
         if(staffIndex < 0 || staffIndex >= staffCount){
             touchDragging = false;
             touchDraggingNoteValue = null;
@@ -419,11 +403,13 @@
         }
 
         const staffTopY = staffIndex * staffHeight;
-        const gridX = Math.floor(adjX / 40) * 40 + 20;
-        const gridY = Math.floor((adjY - staffTopY) / 10) * 10 + staffTopY + 5;
+        const gridX = Math.floor(xTouch / 40) * 40 + 20;
+        const gridY = Math.floor((yTouch - staffTopY) / 10) * 10 + staffTopY + 5;
 
         const noteSymbol = noteMapping[touchDraggingNoteValue] || touchDraggingNoteValue;
-        let fontSize = mainNotes.includes(touchDraggingNoteValue) ? 40 : (auxNotes.includes(touchDraggingNoteValue) ? 20 : 30);
+        let fontSize = 30;
+        if(mainNotes.includes(touchDraggingNoteValue)) fontSize = 40;
+        else if(auxNotes.includes(touchDraggingNoteValue)) fontSize = 20;
 
         placedNotes.push({symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue: touchDraggingNoteValue});
         redrawAllNotes();
@@ -432,10 +418,10 @@
         touchDragging = false;
     }, {passive:false});
 
-    // PDF 下载
+    // PDF 导出
     downloadPdfBtn.addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
+        let pdf = new jsPDF({
             orientation: 'landscape',
             unit: 'px',
             format: [canvas.width, canvas.height]
@@ -447,6 +433,7 @@
 
     // 初始化画布尺寸
     resizeCanvas();
+
 </script>
 </body>
 </html>
