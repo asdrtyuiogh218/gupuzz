@@ -126,6 +126,28 @@
             margin-bottom: 0;
         }
 
+        /* 新增节拍器样式 */
+        #metronomeContainer {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #bpmSelect {
+            font-size: 14px;
+            padding: 4px 8px;
+            margin-right: 10px;
+        }
+        #metronomeBtn {
+            cursor: pointer;
+            font-size: 14px;
+            padding: 6px 14px;
+            border: 1px solid #007bff;
+            color: #007bff;
+            border-radius: 4px;
+            background: white;
+            user-select: none;
+            max-width: 160px;
+        }
+
         @media (max-width: 480px) {
             .note {
                 flex: 0 0 55px;
@@ -166,7 +188,18 @@
     <!-- 新增谱名输入 -->
     <div id="scoreNameContainer">
         <label for="scoreNameInput">请输入谱名：</label><br/>
-        <input type="text" id="scoreNameInput" placeholder="例如：立春" />
+        <input type="text" id="scoreNameInput" placeholder="例如：立春    **务必输入一个谱名**" />
+    </div>
+
+    <!-- 新增节拍器 -->
+    <div id="metronomeContainer">
+        <select id="bpmSelect" title="选择节拍">
+            <option value="240">240 BPM（一拍四声）</option>
+            <option value="120" selected>120 BPM（一拍两声）</option>
+            <option value="60">60 BPM（一拍一声）</option>
+            <option value="30">30 BPM（两拍一声）</option>
+        </select>
+        <button id="metronomeBtn" title="开启/关闭节拍器">启动节拍器</button>
     </div>
 
     <button id="addStaffBtn" title="点击新增一行五线谱">新增五线谱行</button>
@@ -213,6 +246,10 @@
     const addStaffBtn = document.getElementById('addStaffBtn');
     const downloadPdfBtn = document.getElementById('downloadPdfBtn');
     const scoreNameInput = document.getElementById('scoreNameInput');
+
+    // 节拍器相关元素
+    const bpmSelect = document.getElementById('bpmSelect');
+    const metronomeBtn = document.getElementById('metronomeBtn');
 
     // 五线谱行数与尺寸配置
     let staffCount = 3;
@@ -261,6 +298,12 @@
         'R0.125'
     ];
     const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
+
+    // 节拍线相关变量
+    let metronomeInterval = null;
+    let metronomeAnimRequest = null;
+    let metronomeLineX = 20;
+    let metronomeLineSpeed = 0;
 
     function resizeCanvas() {
         const containerWidth = document.querySelector('.container').clientWidth;
@@ -311,6 +354,16 @@
             ctx.font = note.fontSize + 'px serif';
             ctx.fillText(note.symbol, note.x, note.y);
         });
+
+        // 画节拍线（红色竖线）
+        if (metronomeInterval) {
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(metronomeLineX, 0);
+            ctx.lineTo(metronomeLineX, canvas.height);
+            ctx.stroke();
+        }
     }
 
     addStaffBtn.addEventListener('click', () => {
@@ -495,6 +548,136 @@
         fileName = fileName.replace(/[/\\?%*:|"<>]/g, '-');
 
         pdf.save(fileName + '.pdf');
+    });
+
+    // ----------- 节拍器功能 -----------
+    let audioCtx = null;
+    let tickFrequency = 1000; // 1kHz
+
+    function playTick(time) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        osc.frequency.value = tickFrequency;
+        osc.type = 'square';
+
+        gainNode.gain.setValueAtTime(1, time);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.start(time);
+        osc.stop(time + 0.05);
+    }
+
+    // 计算节拍线速度和间隔（每秒移动的像素）
+    function calculateMetronomeLineSpeed() {
+        let bpm = Number(bpmSelect.value);
+        let voicePerBeat;
+        switch (bpm) {
+            case 240: voicePerBeat = 4; break;
+            case 120: voicePerBeat = 2; break;
+            case 60: voicePerBeat = 1; break;
+            case 30: voicePerBeat = 0.5; break;
+            default: voicePerBeat = 1; break;
+        }
+        const beatsPerMinute = bpm;
+        const ticksPerMinute = beatsPerMinute * voicePerBeat;
+        const intervalSec = 60 / ticksPerMinute;
+
+        // 让线每节拍移动40像素（与音符间隔一致）
+        metronomeLineSpeed = 40 / intervalSec;
+    }
+
+    // 动画函数让节拍线移动并循环
+    function animateMetronomeLine(timestamp) {
+        if (!metronomeInterval) {
+            // 停止动画，重置参数
+            metronomeLineX = 20;
+            redrawAllNotes();
+            return;
+        }
+        if (!animateMetronomeLine.lastTimestamp) {
+            animateMetronomeLine.lastTimestamp = timestamp;
+        }
+        let diff = timestamp - animateMetronomeLine.lastTimestamp;
+        animateMetronomeLine.lastTimestamp = timestamp;
+
+        let step = (metronomeLineSpeed * diff) / 1000;
+        metronomeLineX += step;
+
+        if (metronomeLineX > canvas.width) {
+            metronomeLineX = 20;
+        }
+        redrawAllNotes();
+        metronomeAnimRequest = requestAnimationFrame(animateMetronomeLine);
+    }
+
+    function startMetronome() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        let bpm = Number(bpmSelect.value);
+        let voicePerBeat;
+        switch (bpm) {
+            case 240: voicePerBeat = 4; break;
+            case 120: voicePerBeat = 2; break;
+            case 60: voicePerBeat = 1; break;
+            case 30: voicePerBeat = 0.5; break;
+            default: voicePerBeat = 1; break;
+        }
+        const beatsPerMinute = bpm;
+        const ticksPerMinute = beatsPerMinute * voicePerBeat;
+        const intervalSec = 60 / ticksPerMinute;
+        const intervalMs = intervalSec * 1000;
+
+        if (metronomeInterval) clearInterval(metronomeInterval);
+
+        playTick(audioCtx.currentTime);
+
+        metronomeInterval = setInterval(() => {
+            playTick(audioCtx.currentTime);
+        }, intervalMs);
+
+        metronomeBtn.textContent = '停止节拍器';
+
+        metronomeLineX = 20;
+        calculateMetronomeLineSpeed();
+
+        if (!metronomeAnimRequest) {
+            animateMetronomeLine.lastTimestamp = 0;
+            metronomeAnimRequest = requestAnimationFrame(animateMetronomeLine);
+        }
+    }
+
+    function stopMetronome() {
+        if (metronomeInterval) {
+            clearInterval(metronomeInterval);
+            metronomeInterval = null;
+            metronomeBtn.textContent = '启动节拍器';
+        }
+        if (metronomeAnimRequest) {
+            cancelAnimationFrame(metronomeAnimRequest);
+            metronomeAnimRequest = null;
+        }
+        metronomeLineX = 20;
+        redrawAllNotes();
+    }
+
+    metronomeBtn.addEventListener('click', () => {
+        if (metronomeInterval) {
+            stopMetronome();
+        } else {
+            startMetronome();
+        }
+    });
+
+    bpmSelect.addEventListener('change', () => {
+        if (metronomeInterval) {
+            calculateMetronomeLineSpeed();
+        }
     });
 
     // 初始化画布尺寸
