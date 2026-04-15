@@ -1,242 +1,356 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>二十四节令鼓鼓谱制作</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>二十四节令鼓鼓谱制作</title>
+<style>
+    /* 整体背景和字体 */
+    body {
+        margin: 0;
+        padding: 25px;
+        background: linear-gradient(135deg, #f5f6f7 0%, #dde1e7 100%);
+        font-family: 'Roboto Mono', Consolas, monospace;
+        color: #222;
+        user-select: none;
+        overflow-x: hidden;
+    }
 
+    /* 中间容器 */
+    .container {
+        max-width: 660px;
+        margin: auto;
+        background: #fff;
+        border-radius: 10px;
+        padding: 25px 30px 35px;
+        box-shadow:
+          0 0 10px 1px rgba(30, 30, 30, 0.07),
+          inset 0 0 8px 0 rgba(100,100,120,0.03);
+        border: 2px solid #cbd2e6;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    h1 {
+        font-weight: 600;
+        font-size: 1.7rem;
+        text-align: center;
+        letter-spacing: 0.07rem;
+        color: #1d2939;
+        margin-bottom: 8px;
+        text-shadow: 0 0 5px #a8b0bb;
+    }
+
+    h5 {
+        text-align: center;
+        font-weight: 400;
+        font-size: 0.95rem;
+        color: #44596a;
+        margin: 0;
+        line-height: 1.4;
+        user-select: none;
+        letter-spacing: 0.01em;
+    }
+
+    /* 谱名输入区 */
+    #scoreNameContainer {
+        margin: 20px auto 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+    #scoreNameContainer label {
+        font-weight: 700;
+        color: #2a3f5f;
+        letter-spacing: 0.02rem;
+    }
+    #scoreNameInput {
+        width: 180px; /* 和节拍器选择框宽度保持相同 */
+        padding: 10px 18px;
+        font-size: 16px;
+        border: 2px solid #7892c2;
+        border-radius: 8px;
+        background: #f0f4fb;
+        box-shadow: inset 0 0 5px #b0c4e7;
+        color: #1e2e48;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        outline-offset: 2px;
+        font-family: 'Roboto Mono', monospace;
+        box-sizing: border-box;
+        text-align: center;
+    }
+    #scoreNameInput::placeholder {
+        color: #89a2c1;
+        font-style: italic;
+    }
+    #scoreNameInput:focus {
+        border-color: #2d54ff;
+        box-shadow: 0 0 8px #537affa8;
+        background: #e6eeff;
+        outline: none;
+    }
+
+
+    /* 音符容器 */
+    .note-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 28px;
+    }
+
+    /* 音符样式 */
+    .note {
+        width: 75px;
+        height: 44px;
+        background: linear-gradient(135deg, #e9eef9, #c1ccf0);
+        border: 2px solid #8594c7;
+        border-radius: 9px;
+        box-shadow:
+            0 1px 3px rgba(70, 80, 130, 0.6),
+            inset 0 3px 6px #eff5ff;
+        color: #1a2b52;
+        font-size: 20px;
+        line-height: 44px;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        transition:
+            background 0.3s ease,
+            border-color 0.25s ease,
+            box-shadow 0.35s ease,
+            color 0.3s ease;
+        font-weight: 700;
+        font-family: 'Roboto Mono', monospace;
+    }
+    .note:hover {
+        background: linear-gradient(135deg, #c3d0fa, #9baedb);
+        border-color: #3f55a5;
+        color: #182755;
+        box-shadow:
+            0 0 16px #4a5ee4,
+            inset 0 2px 8px #a8bbf5;
+    }
+
+    /* 画布样式 */
+    canvas#scoreCanvas {
+        width: 100% !important;
+        border: 2px solid #7a83b9;
+        border-radius: 12px;
+        background-color: #f7f9fc;
+        box-shadow: inset 0 0 10px #d2d9f8;
+        cursor: crosshair;
+        user-select: none;
+        touch-action: none;
+        display: block;
+    }
+
+    /* 按钮基础样式 */
+    #addStaffBtn,
+    #downloadPdfBtn,
+    #metronomeBtn {
+        max-width: 180px;
+        margin: 0 auto 16px;
+        padding: 12px 22px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #e7ebff;
+        background: #3a4dde;
+        border: none;
+        border-radius: 10px;
+        box-shadow:
+            0 6px 10px -2px rgba(50,70,180,0.7),
+            0 2px 6px rgba(58,77,222,0.8);
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.35s ease, box-shadow 0.3s ease;
+        font-family: 'Roboto Mono', monospace;
+        letter-spacing: 0.06em;
+    }
+    #addStaffBtn:hover,
+    #downloadPdfBtn:hover,
+    #metronomeBtn:hover {
+        background: #587ceb;
+        box-shadow:
+            0 8px 15px -4px rgba(45, 65, 195, 0.9),
+            0 3px 10px rgba(88,124,235,1);
+    }
+
+    #downloadPdfBtn {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    /* 节拍器区域 */
+    #metronomeContainer {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    #bpmSelect {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 15px;
+        padding: 8px 14px;
+        border-radius: 9px;
+        border: 2px solid #7a84d1;
+        color: #2d3c6a;
+        background: #e9eeff;
+        box-shadow: inset 0 0 6px #a9b8fc;
+        user-select: none;
+        cursor: pointer;
+        outline-offset: 2px;
+        transition: border-color 0.3s ease;
+        margin-right: 12px;
+        width: 180px;
+        box-sizing: border-box;
+        text-align: center;
+    }
+    #bpmSelect:focus {
+        border-color: #3451d6;
+        outline: none;
+        background: #d4dbff;
+    }
+
+    /* 垃圾桶 */
+    #trashbin {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        width: 90px;
+        height: 90px;
+        background: #dde1f7;
+        border: 3px dashed #4c5ed0;
+        border-radius: 14px;
+        color: #384a8a;
+        font-size: 26px;
+        line-height: 90px;
+        text-align: center;
+        cursor: default;
+        user-select: none;
+        box-shadow:
+            inset 0 0 12px #9ca6f5,
+            0 0 10px #6976dd;
+        transition:
+            background-color 0.4s ease,
+            box-shadow 0.4s ease,
+            color 0.3s ease,
+            border-color 0.3s ease;
+        z-index: 9999;
+    }
+    #trashbin.dragover {
+        background-color: #bac1fa;
+        border-color: #3a47b7;
+        color: #28336e;
+        box-shadow:
+            inset 0 0 20px #6672ff,
+            0 0 20px #3b42b3;
+    }
+
+    /* 响应式 */
+    @media (max-width: 480px) {
         .container {
-            width: 90vw;
-            max-width: 620px;
-            margin: auto;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            position: relative;
-            box-sizing: border-box;
+            padding: 18px 16px 22px;
         }
-
         h1 {
-            text-align: center;
             font-size: 1.4rem;
-            margin: 0 0 16px;
-        }
-
-        h5 {
-            text-align: center;
-        }
-
-        #scoreNameContainer {
-            margin: 12px auto 24px;
-            text-align: center;
         }
         #scoreNameInput {
-            width: 60%;
-            padding: 6px 10px;
+            width: 140px;
             font-size: 14px;
-            border: 1px solid #888;
-            border-radius: 4px;
+            padding: 9px 14px;
         }
-
-        .note-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 6px;
-            margin-bottom: 20px;
-        }
-
         .note {
-            flex: 0 0 70px;
-            height: 42px;
-            border: 1px solid #000;
-            border-radius: 5px;
-            text-align: center;
-            line-height: 42px;
-            background-color: #e7f3fe;
-            font-size: 14px;
-            user-select: none;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            cursor: pointer;
-            touch-action: none;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            border: 1px solid #000;
-            cursor: crosshair;
-            border-radius: 4px;
-            touch-action: none;
-            user-select:none;
-        }
-
-        #trashbin {
-            position: fixed;
-            right: 12px;
-            bottom: 12px;
-            width: 80px;
-            height: 80px;
-            border: 2px dashed #c33;
-            border-radius: 10px;
-            background-color: #fee;
-            color: #a00;
+            width: 60px;
+            height: 38px;
             font-size: 18px;
-            text-align: center;
-            line-height: 80px;
-            user-select: none;
-            transition: background-color 0.3s, border-color 0.3s;
-            z-index: 999;
-            touch-action: none;
+            line-height: 38px;
         }
-        #trashbin.dragover {
-            background-color: #faa;
-            border-color: #a00;
-            color: #600;
+        canvas#scoreCanvas {
+            border-width: 1.8px;
+            border-radius: 9px;
         }
-
-        #addStaffBtn, #downloadPdfBtn {
-            display: block;
-            margin: 0 auto 12px;
-            padding: 6px 14px;
+        #trashbin {
+            width: 70px;
+            height: 70px;
+            font-size: 22px;
+            line-height: 70px;
+        }
+        #addStaffBtn,
+        #downloadPdfBtn,
+        #metronomeBtn {
+            max-width: 100%;
             font-size: 14px;
-            cursor: pointer;
-            border: 1px solid #007bff;
-            color: #007bff;
-            border-radius: 4px;
-            background: white;
-            user-select: none;
-            text-align: center;
-            max-width: 160px;
-        }
-
-        #downloadPdfBtn {
-            margin-top: 12px;
-            margin-bottom: 0;
-        }
-
-        /* 新增节拍器样式 */
-        #metronomeContainer {
-            text-align: center;
-            margin-bottom: 20px;
+            padding: 10px 16px;
         }
         #bpmSelect {
-            font-size: 14px;
-            padding: 4px 8px;
-            margin-right: 10px;
+            font-size: 13px;
+            padding: 6px 12px;
+            margin-right: 8px;
+            width: 140px;
         }
-        #metronomeBtn {
-            cursor: pointer;
-            font-size: 14px;
-            padding: 6px 14px;
-            border: 1px solid #007bff;
-            color: #007bff;
-            border-radius: 4px;
-            background: white;
-            user-select: none;
-            max-width: 160px;
-        }
-
-        @media (max-width: 480px) {
-            .note {
-                flex: 0 0 55px;
-                height: 35px;
-                font-size: 12px;
-                line-height: 35px;
-            }
-            #trashbin {
-                width: 60px;
-                height: 60px;
-                font-size: 16px;
-                line-height: 60px;
-            }
-            h1 {
-                font-size: 1.1rem;
-                margin-bottom: 12px;
-            }
-            #addStaffBtn,
-            #downloadPdfBtn {
-                max-width: 100%;
-                margin-bottom: 10px;
-            }
-            #scoreNameInput {
-                width: 80%;
-            }
-        }
-    </style>
-    <!-- 引入 jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    }
+</style>
+<!-- Google Fonts Roboto Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet" />
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<div class="container">
-    <h1>二十四节令鼓鼓谱制作</h1>
-    <h5>电脑使用者请通过拖动方格来移动音符，手机使用者请通过点击方格来放置音符在对应位置。</h5>
+    <div class="container">
+        <h1>二十四节令鼓鼓谱制作</h1>
+        <h5>电脑使用者请通过拖动方格来移动音符，手机使用者请通过点击方格来放置音符在对应位置。</h5>
+        <h5>感谢你的使用。</h5>
 
-    <h5>感谢你的使用。</h5>
+        <div id="scoreNameContainer">
+            <label for="scoreNameInput">请输入谱名：</label>
+            <input type="text" id="scoreNameInput" placeholder="例如：立春    **务必输入一个谱名**" />
+        </div>
 
-    <!-- 新增谱名输入 -->
-    <div id="scoreNameContainer">
-        <label for="scoreNameInput">请输入谱名：</label><br/>
-        <input type="text" id="scoreNameInput" placeholder="例如：立春    **务必输入一个谱名**" />
+        <div id="metronomeContainer">
+            <select id="bpmSelect" title="选择节拍">
+                <option value="240">240 BPM（一拍四声）</option>
+                <option value="120" selected>120 BPM（一拍两声）</option>
+                <option value="60">60 BPM（一拍一声）</option>
+                <option value="30">30 BPM（两拍一声）</option>
+            </select>
+            <button id="metronomeBtn" title="开启/关闭节拍器">启动节拍器</button>
+        </div>
+
+        <button id="addStaffBtn" title="点击新增一行五线谱">新增五线谱行</button>
+
+        <div class="note-container">
+            <div class="note" draggable="true" data-value="4">𝄽</div>
+            <div class="note" draggable="true" data-value="2">𝄼</div>
+            <div class="note" draggable="true" data-value="1">♩</div>
+            <div class="note" draggable="true" data-value="0.5">♪</div>
+            <div class="note" draggable="true" data-value="0.25">♫</div>
+            <div class="note" draggable="true" data-value="0.125">♬</div>
+            <div class="note" draggable="true" data-value="R4">𝄻</div>
+            <div class="note" draggable="true" data-value="R2">𝄼</div>
+            <div class="note" draggable="true" data-value="R1">𝄽</div>
+            <div class="note" draggable="true" data-value="R0.5">𝄾</div>
+            <div class="note" draggable="true" data-value="R0.25">𝄿</div>
+            <div class="note" draggable="true" data-value="R0.125">𝅀</div>
+
+            <div class="note" draggable="true" data-value="z">左</div>
+            <div class="note" draggable="true" data-value="y">右</div>
+            <div class="note" draggable="true" data-value="d">地</div>
+            <div class="note" draggable="true" data-value="g">棒</div>
+            <div class="note" draggable="true" data-value="he">he</div>
+            <div class="note" draggable="true" data-value="ha">ha</div>
+            <div class="note" draggable="true" data-value="ho">ho</div>
+            <div class="note" draggable="true" data-value="sa">sa</div>
+            <div class="note" draggable="true" data-value="hesa">hesa</div>
+        </div>
+
+        <canvas id="scoreCanvas"></canvas>
+
+        <button id="downloadPdfBtn" title="导出当前五线谱为 PDF">以 PDF 下载</button>
     </div>
 
-    <!-- 新增节拍器 -->
-    <div id="metronomeContainer">
-        <select id="bpmSelect" title="选择节拍">
-            <option value="240">240 BPM（一拍四声）</option>
-            <option value="120" selected>120 BPM（一拍两声）</option>
-            <option value="60">60 BPM（一拍一声）</option>
-            <option value="30">30 BPM（两拍一声）</option>
-        </select>
-        <button id="metronomeBtn" title="开启/关闭节拍器">启动节拍器</button>
-    </div>
-
-    <button id="addStaffBtn" title="点击新增一行五线谱">新增五线谱行</button>
-
-    <div class="note-container">
-        <!-- 传统音符 -->
-        <div class="note" draggable="true" data-value="4">𝄽</div>
-        <div class="note" draggable="true" data-value="2">𝄼</div>
-        <div class="note" draggable="true" data-value="1">♩</div>
-        <div class="note" draggable="true" data-value="0.5">♪</div>
-        <div class="note" draggable="true" data-value="0.25">♫</div>
-        <div class="note" draggable="true" data-value="0.125">♬</div>
-        <div class="note" draggable="true" data-value="R4">𝄻</div>
-        <div class="note" draggable="true" data-value="R2">𝄼</div>
-        <div class="note" draggable="true" data-value="R1">𝄽</div>
-        <div class="note" draggable="true" data-value="R0.5">𝄾</div>
-        <div class="note" draggable="true" data-value="R0.25">𝄿</div>
-        <div class="note" draggable="true" data-value="R0.125">𝅀</div>
-
-        <!-- 二十四节令鼓辅助符号 -->
-        <div class="note" draggable="true" data-value="z">左</div>
-        <div class="note" draggable="true" data-value="y">右</div>
-        <div class="note" draggable="true" data-value="d">地</div>
-        <div class="note" draggable="true" data-value="g">棒</div>
-        <div class="note" draggable="true" data-value="he">he</div>
-        <div class="note" draggable="true" data-value="ha">ha</div>
-        <div class="note" draggable="true" data-value="ho">ho</div>
-        <div class="note" draggable="true" data-value="sa">sa</div>
-        <div class="note" draggable="true" data-value="hesa">hesa</div>
-    </div>
-
-    <canvas id="scoreCanvas"></canvas>
-
-    <button id="downloadPdfBtn" title="导出当前五线谱为 PDF">以 PDF 下载</button>
-</div>
-
-<div id="trashbin" title="拖拽音符到这里删除">🗑️ 垃圾桶</div>
+    <div id="trashbin" title="拖拽音符到这里删除">🗑️ 垃圾桶</div>
 
 <script>
     const notes = document.querySelectorAll('.note');
@@ -247,18 +361,14 @@
     const downloadPdfBtn = document.getElementById('downloadPdfBtn');
     const scoreNameInput = document.getElementById('scoreNameInput');
 
-    // 节拍器相关元素
     const bpmSelect = document.getElementById('bpmSelect');
     const metronomeBtn = document.getElementById('metronomeBtn');
 
-    // 五线谱行数与尺寸配置
     let staffCount = 3;
     const staffHeight = 120;
     const lineSpacing = 20;
-
     const placedNotes = [];
 
-    // 音符映射
     const noteMapping = {
         '4': '𝄽',
         '2': '𝄼',
@@ -284,22 +394,11 @@
     };
 
     const mainNotes = [
-        '4',
-        '2',
-        '1',
-        '0.5',
-        '0.25',
-        '0.125',
-        'R4',
-        'R2',
-        'R1',
-        'R0.5',
-        'R0.25',
-        'R0.125'
+        '4', '2', '1', '0.5', '0.25', '0.125',
+        'R4', 'R2', 'R1', 'R0.5', 'R0.25', 'R0.125'
     ];
     const auxNotes = ['z', 'y', 'd', 'g', 'he', 'ha', 'ho', 'sa', 'hesa'];
 
-    // 节拍线相关变量
     let metronomeInterval = null;
     let metronomeAnimRequest = null;
     let metronomeLineX = 20;
@@ -307,7 +406,7 @@
 
     function resizeCanvas() {
         const containerWidth = document.querySelector('.container').clientWidth;
-        canvas.width = containerWidth; // 物理绘图宽度
+        canvas.width = containerWidth;
         canvas.height = staffCount * staffHeight;
         canvas.style.width = containerWidth + 'px';
         canvas.style.height = canvas.height + 'px';
@@ -318,19 +417,20 @@
 
     function drawStaffs() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.3;
+        ctx.strokeStyle = '#3e4a7a';
 
-        for (let staffIndex = 0; staffIndex < staffCount; staffIndex++) {
-            const topY = staffIndex * staffHeight;
-            for (let i = 0; i < 5; i++) {
-                const y = topY + (i + 1) * lineSpacing;
+        for (let i = 0; i < staffCount; i++) {
+            const topY = i * staffHeight;
+            for (let line = 0; line < 5; line++) {
+                const y = topY + (line + 1) * lineSpacing;
                 ctx.beginPath();
                 ctx.moveTo(0, y);
                 ctx.lineTo(canvas.width, y);
                 ctx.stroke();
             }
-            ctx.setLineDash([4, 4]);
+            // 辅助横线虚线
+            ctx.setLineDash([6, 6]);
             const auxTopY = topY + lineSpacing * 0.5;
             ctx.beginPath();
             ctx.moveTo(0, auxTopY);
@@ -348,17 +448,15 @@
     function redrawAllNotes() {
         drawStaffs();
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#000';
-
+        ctx.fillStyle = '#2b2f59';
         placedNotes.forEach(note => {
-            ctx.font = note.fontSize + 'px serif';
+            ctx.font = note.fontSize + 'px "Roboto Mono", monospace, serif';
             ctx.fillText(note.symbol, note.x, note.y);
         });
 
-        // 画节拍线（红色竖线）
         if (metronomeInterval) {
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#5870f5';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(metronomeLineX, 0);
             ctx.lineTo(metronomeLineX, canvas.height);
@@ -371,7 +469,6 @@
         resizeCanvas();
     });
 
-    // 拖拽音符到画布
     notes.forEach(note => {
         note.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', note.dataset.value);
@@ -401,13 +498,12 @@
         const noteSymbol = noteMapping[noteValue] || noteValue;
         let fontSize = 30;
         if (mainNotes.includes(noteValue)) fontSize = 40;
-        else if (auxNotes.includes(noteValue)) fontSize = 20;
+        else if (auxNotes.includes(noteValue)) fontSize = 22;
 
         placedNotes.push({ symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue });
         redrawAllNotes();
     });
 
-    // 垃圾桶拖拽删除
     trashbin.addEventListener('dragover', e => {
         e.preventDefault();
         trashbin.classList.add('dragover');
@@ -417,7 +513,6 @@
         trashbin.classList.remove('dragover');
     });
 
-    // 鼠标拖拽画布音符移动和删除
     let draggingNoteIndex = -1;
     let draggingFromCanvas = false;
 
@@ -429,7 +524,6 @@
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
         for (let i = 0; i < placedNotes.length; i++) {
             const n = placedNotes[i];
             if (distance(n.x, n.y, x, y) < 30) {
@@ -447,7 +541,6 @@
                 e.clientX >= trashRect.left && e.clientX <= trashRect.right &&
                 e.clientY >= trashRect.top && e.clientY <= trashRect.bottom
             ) {
-                // 删除音符
                 placedNotes.splice(draggingNoteIndex, 1);
                 redrawAllNotes();
             } else {
@@ -522,7 +615,7 @@
         const noteSymbol = noteMapping[touchDraggingNoteValue] || touchDraggingNoteValue;
         let fontSize = 30;
         if (mainNotes.includes(touchDraggingNoteValue)) fontSize = 40;
-        else if (auxNotes.includes(touchDraggingNoteValue)) fontSize = 20;
+        else if (auxNotes.includes(touchDraggingNoteValue)) fontSize = 22;
 
         placedNotes.push({ symbol: noteSymbol, x: gridX, y: gridY, staffIndex, fontSize, noteValue: touchDraggingNoteValue });
         redrawAllNotes();
@@ -531,7 +624,7 @@
         touchDragging = false;
     }, { passive: false });
 
-    // PDF 导出，文件名以谱名命名，默认score.pdf
+    // PDF导出
     downloadPdfBtn.addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
@@ -544,15 +637,14 @@
 
         let fileName = scoreNameInput.value.trim();
         if (!fileName) fileName = 'score';
-        // 清理文件名非法字符
         fileName = fileName.replace(/[/\\?%*:|"<>]/g, '-');
 
         pdf.save(fileName + '.pdf');
     });
 
-    // ----------- 节拍器功能 -----------
+    // 节拍器相关
     let audioCtx = null;
-    let tickFrequency = 1000; // 1kHz
+    let tickFrequency = 1000;
 
     function playTick(time) {
         if (!audioCtx) return;
@@ -572,7 +664,6 @@
         osc.stop(time + 0.05);
     }
 
-    // 计算节拍线速度和间隔（每秒移动的像素）
     function calculateMetronomeLineSpeed() {
         let bpm = Number(bpmSelect.value);
         let voicePerBeat;
@@ -587,14 +678,11 @@
         const ticksPerMinute = beatsPerMinute * voicePerBeat;
         const intervalSec = 60 / ticksPerMinute;
 
-        // 让线每节拍移动40像素（与音符间隔一致）
         metronomeLineSpeed = 40 / intervalSec;
     }
 
-    // 动画函数让节拍线移动并循环
     function animateMetronomeLine(timestamp) {
         if (!metronomeInterval) {
-            // 停止动画，重置参数
             metronomeLineX = 20;
             redrawAllNotes();
             return;
@@ -680,7 +768,6 @@
         }
     });
 
-    // 初始化画布尺寸
     resizeCanvas();
 </script>
 </body>
